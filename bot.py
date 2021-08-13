@@ -12,7 +12,8 @@ party_max = 5
 
 players = []
 
-# TODO: change player list to dict, add clear after
+# TODO: change player list to dict, add clear after new ini roll start, if assigned value changed since last checked, update else ignore
+
 init_msg = None
 
 
@@ -91,8 +92,8 @@ async def start_init_roller(ctx, args):
 
 
 async def players_answered():
-    #check if all players answered based on message histor
-
+    # TODO check if all players answered based on message history
+    # or register every user in a dictionary along with their init roll
 
     # h_messages = await init_msg.channel.history().flatten()
     # player_list = players
@@ -104,6 +105,7 @@ async def players_answered():
     #     return False
 
     # return True
+    pass
 
 
 @bot.command(name="ini")
