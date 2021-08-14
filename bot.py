@@ -1,18 +1,18 @@
-import os
 import discord
 import asyncio
+import config
 from discord.ext import commands
-from dotenv import load_dotenv
-load_dotenv()
 
-private_tkn = os.getenv('TOKEN')
 bot = commands.Bot(command_prefix='!')
 init_roller_timer_in_seconds = 15
-party_max = 5
+
+#TODO create interface for dict, no more guessing :)
+#TODO split up commands by files/categories
+#TODO show all configs in streamlined message
+
 
 players = {} # Key, Value = player name, current ini role, which is None at the start
 
-# TODO: change player list to dict, add clear after new ini roll start, if assigned value changed since last checked, update else ignore
 
 init_msg = None
 
@@ -21,7 +21,6 @@ init_msg = None
 async def on_ready():
     print("Bot is ready")
 
-
 # function to register players in a global array
 # function to check if all players responded within msg history
 
@@ -29,11 +28,11 @@ async def on_ready():
 @bot.command(name="reg")
 @commands.has_role("PartyMember")
 async def register_player(ctx):
-    if len(players) >= party_max:
+    if len(players) >= config.party_max:
         await ctx.send('the party is full.')
         await ctx.send(get_party_list())
         return
-    elif not ctx.author in players:
+    elif ctx.author not in players:
         players[ctx.author] = None
         print(f"Adding {ctx.author.display_name} to playerlist")
         await ctx.send('Succesfully registered to the party!')
@@ -49,22 +48,18 @@ async def register_player(ctx):
 async def show_registered_players(ctx):
     await ctx.send(get_party_list())
 
-
 @bot.command(name="sp_max")
 @commands.has_role("DungeonMaster")
 async def show_registered_players(ctx, args):
-    global party_max
     try:
-        party_max = int(args)
+        config.party_max = int(args)
     except:
         await ctx.send('Invalid number!')
-    await ctx.send(f"The party max is set to {party_max}")
+    await ctx.send(f"The party max is set to {config.party_max}")
 
-
-@bot.command(name="get_partymax_size")
-async def max_party_size(ctx):
-    await ctx.send(party_max)
-
+@bot.command(name="config")
+async def show_config(ctx):
+    await ctx.send(config.party_max)
 
 @bot.command(name="clear")
 @commands.has_role("DungeonMaster")
@@ -93,9 +88,7 @@ async def start_init_roller(ctx, args):
 
 
 async def players_answered():
-    # TODO check if all players answered based on message history
-    # or register every user in a dictionary along with their init roll
-    
+  
     h_messages = await init_msg.channel.history(after=init_msg).flatten()
     player_list = players.keys()
     for h_msg in h_messages:
@@ -107,19 +100,32 @@ async def players_answered():
 
     return True
 
+async def clear_ini_rolls(): #clears old values of the ini roll
+    for player in players.keys():
+        players[player] = None
 
+async def format_ini_overview():
+    format_players = ""
+
+    sortedDESC = sorted(players.items(), key = lambda x: x[1], reverse=True)
+
+    for (k,v) in sortedDESC:
+        format_players += '{}, {} rolled: {}\n'.format(k.name, k.nick, v)
+
+    formatted_msg = 'player dice rolls:\n>>> {}'.format(format_players)
+
+    return formatted_msg
 
 @bot.command(name="ini")
 @commands.has_role("DungeonMaster")
 async def start_init_roller(ctx):
     global init_msg
 
-    if not init_msg == None:  # make sure a second timer doesn't spawn
+    if init_msg is not None:  # make sure a second timer doesn't spawn
         return
-    
-    for player in players.keys():
-        players[player] = None
-    
+
+    await clear_ini_rolls() #the the old values at the start of a new ini roll fase
+
     # should prob register channel somewhere
     channel = bot.get_channel(875667641753276426)
 
@@ -137,17 +143,12 @@ async def start_init_roller(ctx):
         # if all players have answered break loop
         await init_msg.edit(content=f"Time left to roll: {counter}")
 
-    format_players = ""
-
-    for player in players.keys():
-        format_players += '\n{}, {} rolled: {}'.format(player.name, player.nick, players[player])
-
-    formatted_msg = 'player dice rolls:\n>>> {}'.format(format_players)
-
-    await ctx.send(formatted_msg)
+    #TODO: format based on asc/desc dice roll values
+    result = await format_ini_overview()
+    await ctx.send(result)
 
 
     init_msg = None
 
 
-bot.run(private_tkn)
+bot.run(config.token)
