@@ -7,10 +7,10 @@ load_dotenv()
 
 private_tkn = os.getenv('TOKEN')
 bot = commands.Bot(command_prefix='!')
-init_roller_timer_in_seconds = 30
+init_roller_timer_in_seconds = 15
 party_max = 5
 
-players = []
+players = {} # Key, Value = player name, current ini role, which is None at the start
 
 # TODO: change player list to dict, add clear after new ini roll start, if assigned value changed since last checked, update else ignore
 
@@ -27,13 +27,14 @@ async def on_ready():
 
 # register a player
 @bot.command(name="reg")
+@commands.has_role("PartyMember")
 async def register_player(ctx):
     if len(players) >= party_max:
         await ctx.send('the party is full.')
         await ctx.send(get_party_list())
         return
     elif not ctx.author in players:
-        players.append(ctx.author)
+        players[ctx.author] = None
         print(f"Adding {ctx.author.display_name} to playerlist")
         await ctx.send('Succesfully registered to the party!')
     else:
@@ -69,13 +70,13 @@ async def max_party_size(ctx):
 @commands.has_role("DungeonMaster")
 async def show_registered_players(ctx):
     global players
-    players = []
+    players = {}
     await ctx.send("Cleared player list!")
 
 
 def get_party_list():
     string_msg = "The following players are registered: \n"
-    for player in players:
+    for player in players.keys():
         string_msg += f"{player.display_name}\n"
     return string_msg
 
@@ -94,18 +95,18 @@ async def start_init_roller(ctx, args):
 async def players_answered():
     # TODO check if all players answered based on message history
     # or register every user in a dictionary along with their init roll
+    
+    h_messages = await init_msg.channel.history(after=init_msg).flatten()
+    player_list = players.keys()
+    for h_msg in h_messages:
+        if h_msg.author in player_list:
+            players[h_msg.author] = h_msg.content
 
-    # h_messages = await init_msg.channel.history().flatten()
-    # player_list = players
-    # for h_msg in h_messages:
-    #     if h_msg.author in player_list:
-    #         player_list[h_msg.author] = None
+    if len(player_list) > 0:
+        return False
 
-    # if len(player_list) > 0:
-    #     return False
+    return True
 
-    # return True
-    pass
 
 
 @bot.command(name="ini")
@@ -115,7 +116,10 @@ async def start_init_roller(ctx):
 
     if not init_msg == None:  # make sure a second timer doesn't spawn
         return
-
+    
+    for player in players.keys():
+        players[player] = None
+    
     # should prob register channel somewhere
     channel = bot.get_channel(875667641753276426)
 
@@ -133,27 +137,17 @@ async def start_init_roller(ctx):
         # if all players have answered break loop
         await init_msg.edit(content=f"Time left to roll: {counter}")
 
+    format_players = ""
+
+    for player in players.keys():
+        format_players += '\n{}, {} rolled: {}'.format(player.name, player.nick, players[player])
+
+    formatted_msg = 'player dice rolls:\n>>> {}'.format(format_players)
+
+    await ctx.send(formatted_msg)
+
+
     init_msg = None
-    # channel = bot.get_channel(875667641753276426)  # get Dice Roll channel
-
-    # await ctx.send(f'Starting countdown in {channel.name}')
-    # msg = await channel.send('Starting countdown!')
-    # secondint = init_roller_timer_in_seconds  # magic number i know but screw it
-    # while True:
-    #     secondint -= 1
-    #     if secondint <= 0:
-    #         # edit existing message
-    #         await msg.edit(content="countdown has ended!")
-    #         break
-    #     await msg.edit(content=f"Timer: {secondint}")
-    #     # sleeps for 1 second, not best method to use but idk what else yet
-    #     await asyncio.sleep(1)
-
-    # messages = await msg.channel.history(after=msg).flatten()
-
-    # await ctx.send()
-    # for messig in messages:
-    #     print(messig.content)
 
 
 bot.run(private_tkn)
