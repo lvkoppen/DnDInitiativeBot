@@ -143,7 +143,7 @@ async def start_init_roller(ctx):
         # if all players have answered break loop
         await init_msg.edit(content=f"Time left to roll: {counter}")
 
-    #TODO: format based on asc/desc dice roll values
+
     result = await format_ini_overview()
     await ctx.send(result)
 
