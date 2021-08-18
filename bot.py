@@ -88,9 +88,13 @@ async def start_init_roller(ctx, args):
 
 
 async def players_answered():
-  
+    if not None in players.values():
+        return True
+
     h_messages = await init_msg.channel.history(after=init_msg).flatten()
+
     player_list = players.keys()
+    
     for h_msg in h_messages:
         if h_msg.author in player_list:
             players[h_msg.author] = h_msg.content
@@ -114,6 +118,7 @@ async def format_ini_overview():
 
     formatted_msg = 'player dice rolls:\n>>> {}'.format(format_players)
 
+    print(formatted_msg)
     return formatted_msg
 
 @bot.command(name="ini")
@@ -127,7 +132,7 @@ async def start_init_roller(ctx):
     await clear_ini_rolls() #the the old values at the start of a new ini roll fase
 
     # should prob register channel somewhere
-    channel = bot.get_channel(875667641753276426)
+    channel = bot.get_channel(825453464653922304)
 
     init_msg = await channel.send("Starting countdown!")
 
